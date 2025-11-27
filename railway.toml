@@ -1,0 +1,17 @@
+[build]
+builder = "Python"
+
+[deploy]
+numReplicas = 1
+startCommand = "python bot.py"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[variables]
+# TELEGRAM_TOKEN is filled from Railway dashboard or secrets
+# You MUST add it manually in Railway → Variables
+
+[cron]
+# Run main.py every hour
+schedule = "0 * * * *"
+command = "python main.py"
