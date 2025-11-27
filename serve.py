@@ -2,6 +2,7 @@ import os
 import asyncio
 import threading
 import datetime
+import time
 
 from dotenv import load_dotenv
 from telegram.ext import ApplicationBuilder, CommandHandler
@@ -68,13 +69,13 @@ def scraper_loop():
     while True:
         print("🔄 Running scheduled scraper...")
         count = run_scraper()
-
         last_scrape_time = datetime.datetime.now()
         last_scrape_count = count
 
-        asyncio.run(asyncio.sleep(1))
-        # 15 minutes wait (normal blocking sleep is fine here)
-        import time
+        # small pause to avoid CPU 100%
+        time.sleep(1)
+
+        # wait 15 minutes
         time.sleep(15 * 60)
 
 
@@ -95,9 +96,8 @@ async def run_bot():
 
 
 if __name__ == "__main__":
-
     # Start scraper loop in background
     threading.Thread(target=scraper_loop, daemon=True).start()
 
-    # Start Telegram bot (async)
+    # Start Telegram bot
     asyncio.run(run_bot())
