@@ -26,6 +26,8 @@ from scraper.morgan import scrape as morgan
 from scraper.goldman import scrape as goldman
 from scraper.spacex import scrape as spacex
 
+
+# MASTER SCRAPER LIST
 SCRAPERS = [
     amazon, google, microsoft, salesforce, atlassian,
     uber, meta, linkedin, nvidia, oracle, walmart,
@@ -33,43 +35,59 @@ SCRAPERS = [
     qualcomm, morgan, goldman, spacex
 ]
 
+
 def main():
     seen = load_seen()
     new_jobs = []
 
+    print("========================================")
+    print("     🚀 Job Scraper Started")
+    print("========================================")
+
     for scraper in SCRAPERS:
-        print(f"\n--- Running: {scraper.__name__} ---")
+        # readable scraper name
+        scraper_module = scraper.__module__.split(".")[-1]
+        scraper_name = scraper.__name__
+
+        print(f"\n--- Running scraper: {scraper_module}.{scraper_name} ---")
+
         try:
             jobs = scraper()
-            print(f"Jobs returned: {len(jobs)}")
+            print(f"Jobs returned by {scraper_module}: {len(jobs)}")
         except Exception as e:
-            print(f"❌ Error in {scraper.__name__}: {e}")
+            print(f"❌ Error in {scraper_module}: {e}")
             continue
 
         for job in jobs:
             if not job or "id" not in job:
                 continue
 
-            jid = job["id"]
+            job_id = job["id"]
 
-            if jid not in seen:
+            if job_id not in seen:
                 new_jobs.append(job)
-                seen.add(jid)
+                seen.add(job_id)
 
-    # Send notifications
+    print(f"\n✨ New jobs found: {len(new_jobs)}")
+
+    # SEND NOTIFICATIONS
     for job in new_jobs:
-
-        flag = "🇮🇳" if is_india(job.get("location", "")) else "🌎"
+        location = job.get("location", "") or ""
+        flag = "🇮🇳" if is_india(location) else "🌎"
 
         send(f"""
 {flag} *New Job Alert!*
 *Company:* {job['company']}
 *Role:* {job['title']}
+*Location:* {job.get("location", "N/A")}
 *Apply:* {job['url']}
 ⏰ {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}
 """)
 
     save_seen(seen)
+
+    print("\n✔ Scraping completed.\n")
+
 
 if __name__ == "__main__":
     main()
