@@ -1,6 +1,4 @@
 from utils.storage import load_seen, save_seen
-from utils.telegram import send
-
 from scraper.common import is_india
 import datetime
 
@@ -27,8 +25,6 @@ from scraper.morgan import scrape as morgan
 from scraper.goldman import scrape as goldman
 from scraper.spacex import scrape as spacex
 
-
-# MASTER SCRAPER LIST
 SCRAPERS = [
     amazon, google, microsoft, salesforce, atlassian,
     uber, meta, linkedin, nvidia, oracle, walmart,
@@ -46,7 +42,6 @@ def main():
     print("========================================")
 
     for scraper in SCRAPERS:
-        # readable scraper name
         scraper_module = scraper.__module__.split(".")[-1]
         scraper_name = scraper.__name__
 
@@ -63,31 +58,17 @@ def main():
             if not job or "id" not in job:
                 continue
 
-            job_id = job["id"]
+            # Ensure missing location does NOT break anything
+            job.setdefault("location", "")
 
-            if job_id not in seen:
+            if job["id"] not in seen:
                 new_jobs.append(job)
-                seen.add(job_id)
+                seen.add(job["id"])
 
     print(f"\n✨ New jobs found: {len(new_jobs)}")
 
-    # SEND NOTIFICATIONS
-    for job in new_jobs:
-        location = job.get("location", "") or ""
-        flag = "🇮🇳" if is_india(location) else "🌎"
-
-        send(f"""
-{flag} *New Job Alert!*
-*Company:* {job['company']}
-*Role:* {job['title']}
-*Location:* {job.get("location", "N/A")}
-*Apply:* {job['url']}
-⏰ {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}
-""")
-
     save_seen(seen)
-
-    print("\n✔ Scraping completed.\n")
+    return new_jobs  # serve.py needs the full job list
 
 
 if __name__ == "__main__":

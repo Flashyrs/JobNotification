@@ -1,6 +1,5 @@
-python-telegram-bot==20.7
-requests==2.32.5
-beautifulsoup4==4.14.2
-lxml==6.0.2
-python-dotenv==1.2.1
-# force update
+python-telegram-bot>=20,<21
+requests
+beautifulsoup4
+lxml
+python-dotenv
