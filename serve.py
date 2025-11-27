@@ -96,8 +96,11 @@ async def run_bot():
 
 
 if __name__ == "__main__":
-    # Start scraper loop in background
+    # Start scraper in background
     threading.Thread(target=scraper_loop, daemon=True).start()
 
-    # Start Telegram bot
-    asyncio.run(run_bot())
+    # Start Telegram bot (non-async entrypoint)
+    import asyncio
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(run_bot())
