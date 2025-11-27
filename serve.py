@@ -1,14 +1,18 @@
+import os
 import threading
 import time
-import os
 import datetime
-from utils.storage import add_subscriber
-from utils.storage import remove_subscriber
 
-from main import main as run_scraper
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
 load_dotenv()
+
+# LOAD TELEGRAM FIRST
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+
+# THEN load your own files
+from utils.storage import add_subscriber, remove_subscriber
+from main import main as run_scraper
+
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
@@ -94,8 +98,9 @@ def start_bot():
 
 
 if __name__ == "__main__":
-    # Start scraper loop in a background thread
+    # Start bot FIRST
+    threading.Thread(target=start_bot).start()
+
+    # Start scraper AFTER bot loads
     threading.Thread(target=scraper_loop, daemon=True).start()
 
-    # Start telegram bot (blocking)
-    start_bot()
