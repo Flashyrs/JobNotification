@@ -1,20 +1,20 @@
-import os
 import threading
 import time
+import os
 import datetime
-
 from dotenv import load_dotenv
+
 load_dotenv()
 
-# LOAD TELEGRAM FIRST
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-
-# THEN load your own files
+from telegram.ext import ApplicationBuilder, CommandHandler
 from utils.storage import add_subscriber, remove_subscriber
 from main import main as run_scraper
 
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+if not TELEGRAM_TOKEN:
+    raise RuntimeError("❌ TELEGRAM_TOKEN missing")
+
 
 last_scrape_time = None
 last_scrape_count = 0
@@ -23,40 +23,28 @@ last_scrape_count = 0
 # ========== BOT COMMANDS ==========
 
 async def start(update, context):
-    from utils.storage import add_subscriber
     add_subscriber(update.effective_chat.id)
-
-    await update.effective_chat.send_message(
-        "✅ You are now subscribed to job alerts!"
-    )
+    await update.effective_chat.send_message("✅ You are now subscribed to job alerts!")
 
 
 async def stop(update, context):
-    from utils.storage import remove_subscriber
     remove_subscriber(update.effective_chat.id)
-
-    await update.effective_chat.send_message(
-        "❎ You have been unsubscribed."
-    )
+    await update.effective_chat.send_message("❎ You are unsubscribed!")
 
 
 async def fetch(update, context):
     global last_scrape_time, last_scrape_count
 
     await update.effective_chat.send_message("🔍 Running scraper now...")
-
     count = run_scraper()
+
     last_scrape_time = datetime.datetime.now()
     last_scrape_count = count
 
-    await update.effective_chat.send_message(
-        f"✅ Scrape finished! Found {count} new jobs."
-    )
+    await update.effective_chat.send_message(f"✅ Scrape finished! Found {count} new jobs.")
 
 
 async def status(update, context):
-    global last_scrape_time, last_scrape_count
-
     if last_scrape_time:
         msg = f"""
 📊 *Scraper Status*
@@ -69,23 +57,23 @@ Jobs Found: {last_scrape_count}
     await update.effective_chat.send_message(msg, parse_mode="Markdown")
 
 
-# ========== BACKGROUND SCHEDULER ==========
+# ========== SCRAPER LOOP ==========
 
 def scraper_loop():
     global last_scrape_time, last_scrape_count
-
     while True:
         print("🔄 Running scheduled scraper...")
         count = run_scraper()
         last_scrape_time = datetime.datetime.now()
         last_scrape_count = count
 
-        time.sleep(15 * 60)  # Run every 15 minutes
+        time.sleep(15 * 60)   # 15 minutes
 
 
-# ========== MAIN STARTER ==========
+# ========== BOT ==========
 
 def start_bot():
+    print("🤖 Telegram bot is starting...")
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
@@ -93,14 +81,14 @@ def start_bot():
     app.add_handler(CommandHandler("fetch", fetch))
     app.add_handler(CommandHandler("status", status))
 
-    print("🤖 Telegram bot is now running...")
-    app.run_polling()
+    app.run_polling()  # <-- Windows safe, no asyncio.run()
 
+
+# ========== MAIN ==========
 
 if __name__ == "__main__":
-    # Start bot FIRST
-    threading.Thread(target=start_bot).start()
-
-    # Start scraper AFTER bot loads
+    # Background scraper thread
     threading.Thread(target=scraper_loop, daemon=True).start()
 
+    # Bot runs in main thread
+    start_bot()

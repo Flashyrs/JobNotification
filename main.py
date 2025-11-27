@@ -1,5 +1,6 @@
 from utils.storage import load_seen, save_seen
 from utils.telegram import send
+
 from scraper.common import is_india
 import datetime
 
