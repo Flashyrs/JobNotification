@@ -1,8 +1,9 @@
 import os
-import asyncio
 import threading
 import datetime
 import time
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 from dotenv import load_dotenv
 from telegram.ext import ApplicationBuilder, CommandHandler
@@ -33,7 +34,11 @@ async def fetch(update, context):
 
     await update.effective_chat.send_message("🔍 Running scraper...")
 
-    new_jobs = run_scraper()
+    # Run the scraper in a thread pool to avoid blocking the event loop
+    loop = asyncio.get_event_loop()
+    with ThreadPoolExecutor() as executor:
+        new_jobs = await loop.run_in_executor(executor, run_scraper)
+    
     count = len(new_jobs) if new_jobs else 0
     last_scrape_time = datetime.datetime.now()
     last_scrape_count = count
@@ -59,26 +64,36 @@ def scraper_loop():
 
     while True:
         print("🔄 Running scheduled scraper...")
-        new_jobs = run_scraper()
-        count = len(new_jobs) if new_jobs else 0
-        last_scrape_time = datetime.datetime.now()
-        last_scrape_count = count
+        try:
+            new_jobs = run_scraper()
+            count = len(new_jobs) if new_jobs else 0
+            last_scrape_time = datetime.datetime.now()
+            last_scrape_count = count
+            print(f"✅ Scraper completed: {count} new jobs found")
+        except Exception as e:
+            print(f"❌ Scraper error: {e}")
+        
         time.sleep(15 * 60)
 
 
-async def run_bot():
+def main():
+    # Start the scraper loop in a background thread
+    threading.Thread(target=scraper_loop, daemon=True).start()
+
+    # Build the application
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
+    # Add command handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("stop", stop))
     app.add_handler(CommandHandler("fetch", fetch))
     app.add_handler(CommandHandler("status", status))
 
     print("🤖 Telegram bot is running...")
-    await app.run_polling()
+    
+    # Run the bot - this handles the event loop internally
+    app.run_polling(allowed_updates=["message"])
 
 
 if __name__ == "__main__":
-    threading.Thread(target=scraper_loop, daemon=True).start()
-
-    asyncio.run(run_bot())
+    main()
