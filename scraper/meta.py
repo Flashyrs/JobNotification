@@ -22,6 +22,7 @@ def scrape():
                 "id": job.get("id"),
                 "title": title,
                 "company": "Meta",
-                "url": job.get("canonical_url")
+                "url": job.get("canonical_url"),
+                "location": loc
             })
     return jobs

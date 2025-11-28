@@ -1,35 +1,39 @@
 import requests
-from bs4 import BeautifulSoup
 from scraper.common import KEYWORDS, is_india
 
 def scrape():
-    url = "https://www.goldmansachs.com/careers/students"
+    # Goldman Sachs uses their own API
+    url = "https://goldmansachs.tal.net/vx/lang-en-GB/mobile-0/appcentre-ext/brand-0/candidate/jobboard/vacancy/1/offset/0"
+    
     try:
-        html = requests.get(url, timeout=20).text
+        response = requests.get(url, timeout=20)
+        data = response.json()
+        
+        jobs = []
+        
+        for job in data.get("requisitionList", []):
+            columns = job.get("column", [])
+            
+            # Extract title and location from columns
+            title = columns[0].get("value", "") if len(columns) > 0 else ""
+            location = columns[1].get("value", "") if len(columns) > 1 else ""
+            job_id = job.get("jobId", "")
+            
+            if not is_india(location):
+                continue
+            
+            if any(k in title.lower() for k in KEYWORDS):
+                # Construct proper Goldman Sachs careers URL
+                apply_url = f"https://goldmansachs.tal.net/vx/lang-en-GB/mobile-0/brand-0/candidate/so/pm/1/pl/1/opp/{job_id}/en-GB"
+                
+                jobs.append({
+                    "id": job_id,
+                    "title": title,
+                    "company": "Goldman Sachs",
+                    "url": apply_url,
+                    "location": location
+                })
+        
+        return jobs
     except:
         return []
-
-    soup = BeautifulSoup(html, "html.parser")
-    jobs = []
-
-    for a in soup.find_all("a", href=True):
-        text = a.get_text(strip=True)
-        if not text:
-            continue
-
-        if not is_india(text):
-            continue
-
-        if any(k in text.lower() for k in KEYWORDS):
-            href = a["href"]
-            if isinstance(href, str) and href.startswith("/"):
-                href = url.rstrip("/") + href
-
-            jobs.append({
-                "id": href,
-                "title": text,
-                "company": "Goldman Sachs",
-                "url": href
-            })
-
-    return jobs
