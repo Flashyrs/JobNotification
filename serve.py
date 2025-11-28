@@ -18,50 +18,40 @@ last_scrape_time = None
 last_scrape_count = 0
 
 
-# ===========================
-# BOT COMMANDS
-# ===========================
-
 async def start(update, context):
     add_subscriber(update.effective_chat.id)
-    await update.effective_chat.send_message("✅ You are now subscribed to job alerts!")
+    await update.effective_chat.send_message("✅ You are now subscribed!")
 
 
 async def stop(update, context):
     remove_subscriber(update.effective_chat.id)
-    await update.effective_chat.send_message("❎ You have been unsubscribed.")
+    await update.effective_chat.send_message("❎ You are unsubscribed.")
 
 
 async def fetch(update, context):
     global last_scrape_time, last_scrape_count
 
-    await update.effective_chat.send_message("🔍 Running scraper now...")
+    await update.effective_chat.send_message("🔍 Running scraper...")
 
     count = run_scraper()
     last_scrape_time = datetime.datetime.now()
     last_scrape_count = count
 
-    await update.effective_chat.send_message(
-        f"✅ Scrape finished! Found {count} new jobs."
-    )
+    await update.effective_chat.send_message(f"✅ Found {count} new jobs.")
 
 
 async def status(update, context):
     if last_scrape_time:
         msg = f"""
-📊 *Scraper Status*
-Last Run: {last_scrape_time.strftime('%Y-%m-%d %H:%M:%S')}
+📊 *Status*
+Last Run: {last_scrape_time}
 Jobs Found: {last_scrape_count}
 """
     else:
-        msg = "⚠ No scrapes have run yet."
+        msg = "⚠ No scrapes yet."
 
     await update.effective_chat.send_message(msg, parse_mode="Markdown")
 
-
-# ===========================
-# BACKGROUND SCRAPER
-# ===========================
 
 def scraper_loop():
     global last_scrape_time, last_scrape_count
@@ -71,17 +61,8 @@ def scraper_loop():
         count = run_scraper()
         last_scrape_time = datetime.datetime.now()
         last_scrape_count = count
-
-        # small pause to avoid CPU 100%
-        time.sleep(1)
-
-        # wait 15 minutes
         time.sleep(15 * 60)
 
-
-# ===========================
-# MAIN BOT LAUNCHER
-# ===========================
 
 async def run_bot():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
@@ -96,11 +77,6 @@ async def run_bot():
 
 
 if __name__ == "__main__":
-    # Start scraper in background
     threading.Thread(target=scraper_loop, daemon=True).start()
 
-    # Start Telegram bot (non-async entrypoint)
-    import asyncio
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(run_bot())
+    asyncio.run(run_bot())
