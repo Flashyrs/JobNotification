@@ -1,6 +1,6 @@
 from utils.storage import load_seen, save_seen
 from scraper.common import is_india
-from utils.telegram import send
+from utils.telegram import send_jobs
 from utils.formatter import format_job_message
 import datetime
 
@@ -36,8 +36,11 @@ SCRAPERS = [
 
 
 def main():
-    seen = load_seen()
-    new_jobs = []
+    """
+    Main scraper function.
+    Now sends jobs per-subscriber - each user only gets jobs they haven't seen.
+    """
+    all_jobs = []
 
     print("========================================")
     print("     🚀 Job Scraper Started")
@@ -62,31 +65,28 @@ def main():
 
             # Ensure missing location does NOT break anything
             job.setdefault("location", "")
+            
+            # Add scraper name to job for reference
+            job["scraper"] = scraper_module
+            
+            # Add all jobs (per-subscriber filtering happens in send_jobs)
+            all_jobs.append(job)
 
-            if job["id"] not in seen:
-                # Add scraper name to job for reference
-                job["scraper"] = scraper_module
-                new_jobs.append(job)
-                seen.add(job["id"])
+    print(f"\n✨ Total jobs found: {len(all_jobs)}")
 
-    print(f"\n✨ New jobs found: {len(new_jobs)}")
-
-    # Send notifications for new jobs
-    if new_jobs:
-        print(f"\n📤 Sending {len(new_jobs)} job notifications to Telegram...")
-        for job in new_jobs:
-            try:
-                scraper_name = job.get("scraper", "unknown")
-                message = format_job_message(job, scraper_name)
-                send(message)
-                print(f"  ✅ Sent: {job.get('company')} - {job.get('title')}")
-            except Exception as e:
-                print(f"  ❌ Failed to send job notification: {e}")
+    # Send notifications per-subscriber (each user gets only unseen jobs)
+    if all_jobs:
+        stats = send_jobs(all_jobs, format_job_message)
+        
+        # Print summary
+        total_sent = sum(stats.values())
+        print(f"\n📊 Summary: Sent {total_sent} total notifications across {len(stats)} subscriber(s)")
+        for chat_id, count in stats.items():
+            print(f"  - Subscriber {chat_id}: {count} job(s)")
     else:
-        print("\n📭 No new jobs to notify")
+        print("\n📭 No jobs found to notify")
 
-    save_seen(seen)
-    return new_jobs  # serve.py needs the full job list
+    return all_jobs  # serve.py needs the full job list
 
 
 if __name__ == "__main__":

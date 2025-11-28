@@ -1,13 +1,14 @@
 """
 Utility functions for formatting job data for Telegram messages
 """
+from datetime import datetime
 
 def format_job_message(job, scraper_name=None):
     """
     Format a single job into a Telegram message with Markdown formatting.
     
     Args:
-        job (dict): Job dictionary with keys: title, company, url, location (optional)
+        job (dict): Job dictionary with keys: title, company, url, location, date_posted (optional)
         scraper_name (str, optional): Name of the scraper that found this job
     
     Returns:
@@ -18,6 +19,7 @@ def format_job_message(job, scraper_name=None):
     company = job.get("company", "Unknown Company")
     url = job.get("url", "")
     location = job.get("location", "")
+    date_posted = job.get("date_posted", "")
     
     # Build the message
     message = f"🎯 *New Job Alert!*\n\n"
@@ -27,6 +29,9 @@ def format_job_message(job, scraper_name=None):
     if location:
         message += f"*Location:* {location}\n"
     
+    if date_posted:
+        message += f"*Posted:* {date_posted}\n"
+    
     if scraper_name:
         message += f"*Source:* {scraper_name.title()}\n"
     
@@ -34,6 +39,47 @@ def format_job_message(job, scraper_name=None):
         message += f"\n🔗 [Apply Here]({url})\n"
     
     return message
+
+
+def format_relative_date(date_str):
+    """
+    Convert date string to relative format (e.g., "2 days ago", "Today").
+    
+    Args:
+        date_str: ISO format date string or human-readable date
+    
+    Returns:
+        str: Relative date string
+    """
+    if not date_str:
+        return ""
+    
+    try:
+        # Try to parse ISO format
+        if "T" in date_str or "-" in date_str:
+            job_date = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+        else:
+            # Already human-readable
+            return date_str
+        
+        now = datetime.now()
+        diff = now - job_date
+        
+        if diff.days == 0:
+            if diff.seconds < 3600:
+                return f"{diff.seconds // 60} minutes ago"
+            else:
+                return f"{diff.seconds // 3600} hours ago"
+        elif diff.days == 1:
+            return "Yesterday"
+        elif diff.days < 7:
+            return f"{diff.days} days ago"
+        elif diff.days < 30:
+            return f"{diff.days // 7} weeks ago"
+        else:
+            return job_date.strftime("%b %d, %Y")
+    except:
+        return date_str
 
 
 def format_job_summary(jobs):
@@ -79,8 +125,11 @@ def format_jobs_list(jobs, max_jobs=10):
         title = job.get("title", "Unknown Role")
         company = job.get("company", "Unknown Company")
         url = job.get("url", "")
+        date_posted = job.get("date_posted", "")
         
         job_text = f"{i}. *{company}* - {title}\n"
+        if date_posted:
+            job_text += f"   📅 {date_posted}\n"
         if url:
             job_text += f"   🔗 [Apply]({url})\n"
         job_text += "\n"

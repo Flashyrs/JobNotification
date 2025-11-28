@@ -18,6 +18,7 @@ def scrape():
         title_tag = card.select_one("h3.base-search-card__title")
         company_tag = card.select_one("h4.base-search-card__subtitle")
         link_tag = card.select_one("a.base-card__full-link")
+        date_tag = card.select_one("time.job-search-card__listdate")
 
         if not (title_tag and company_tag and link_tag):
             continue
@@ -25,6 +26,11 @@ def scrape():
         title = title_tag.get_text(strip=True)
         company = company_tag.get_text(strip=True)
         link = link_tag.get("href", "")
+        
+        # Extract date posted
+        date_posted = ""
+        if date_tag:
+            date_posted = date_tag.get_text(strip=True) or date_tag.get("datetime", "")
 
         if not is_india(card.get_text()):
             continue
@@ -34,7 +40,8 @@ def scrape():
                 "id": link,
                 "title": title,
                 "company": company,
-                "url": link
+                "url": link,
+                "date_posted": date_posted or "Recently"
             })
 
     return jobs
