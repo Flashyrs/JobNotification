@@ -33,7 +33,8 @@ async def fetch(update, context):
 
     await update.effective_chat.send_message("🔍 Running scraper...")
 
-    count = run_scraper()
+    new_jobs = run_scraper()
+    count = len(new_jobs) if new_jobs else 0
     last_scrape_time = datetime.datetime.now()
     last_scrape_count = count
 
@@ -58,7 +59,8 @@ def scraper_loop():
 
     while True:
         print("🔄 Running scheduled scraper...")
-        count = run_scraper()
+        new_jobs = run_scraper()
+        count = len(new_jobs) if new_jobs else 0
         last_scrape_time = datetime.datetime.now()
         last_scrape_count = count
         time.sleep(15 * 60)
