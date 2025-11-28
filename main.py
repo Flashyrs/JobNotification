@@ -1,5 +1,7 @@
 from utils.storage import load_seen, save_seen
 from scraper.common import is_india
+from utils.telegram import send
+from utils.formatter import format_job_message
 import datetime
 
 # IMPORT SCRAPERS
@@ -62,10 +64,26 @@ def main():
             job.setdefault("location", "")
 
             if job["id"] not in seen:
+                # Add scraper name to job for reference
+                job["scraper"] = scraper_module
                 new_jobs.append(job)
                 seen.add(job["id"])
 
     print(f"\n✨ New jobs found: {len(new_jobs)}")
+
+    # Send notifications for new jobs
+    if new_jobs:
+        print(f"\n📤 Sending {len(new_jobs)} job notifications to Telegram...")
+        for job in new_jobs:
+            try:
+                scraper_name = job.get("scraper", "unknown")
+                message = format_job_message(job, scraper_name)
+                send(message)
+                print(f"  ✅ Sent: {job.get('company')} - {job.get('title')}")
+            except Exception as e:
+                print(f"  ❌ Failed to send job notification: {e}")
+    else:
+        print("\n📭 No new jobs to notify")
 
     save_seen(seen)
     return new_jobs  # serve.py needs the full job list

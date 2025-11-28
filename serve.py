@@ -10,6 +10,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler
 
 from utils.storage import add_subscriber, remove_subscriber
 from main import main as run_scraper
+from utils.formatter import format_job_message, format_jobs_list
 
 load_dotenv()
 
@@ -43,7 +44,36 @@ async def fetch(update, context):
     last_scrape_time = datetime.datetime.now()
     last_scrape_count = count
 
-    await update.effective_chat.send_message(f"✅ Found {count} new jobs.")
+    # Send summary
+    await update.effective_chat.send_message(
+        f"✅ Found {count} new job{'s' if count != 1 else ''}!",
+        parse_mode="Markdown"
+    )
+    
+    # Send detailed job information
+    if new_jobs:
+        # Send each job as a separate message for better readability
+        for i, job in enumerate(new_jobs[:10]):  # Limit to first 10 jobs to avoid spam
+            try:
+                scraper_name = job.get("scraper", "unknown")
+                message = format_job_message(job, scraper_name)
+                await update.effective_chat.send_message(
+                    message,
+                    parse_mode="Markdown",
+                    disable_web_page_preview=True
+                )
+                # Small delay to avoid rate limiting (only if more messages to send)
+                if i < min(len(new_jobs), 10) - 1:
+                    await asyncio.sleep(0.5)
+            except Exception as e:
+                print(f"Error sending job message: {e}")
+        
+        # If there are more than 10 jobs, send a summary
+        if count > 10:
+            await update.effective_chat.send_message(
+                f"📝 ... and {count - 10} more jobs! Check your subscribed notifications.",
+                parse_mode="Markdown"
+            )
 
 
 async def status(update, context):

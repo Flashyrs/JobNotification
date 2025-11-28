@@ -1,5 +1,6 @@
 import requests
 import os
+import time
 from dotenv import load_dotenv
 from utils.subscribers import load_subscribers
 
@@ -19,16 +20,20 @@ def send(message: str):
 
     url = f"https://api.telegram.org/bot{token}/sendMessage"
 
-    for chat_id in subscribers:
+    for i, chat_id in enumerate(subscribers):
         try:
             requests.post(
                 url,
                 json={
                     "chat_id": chat_id,
                     "text": message,
-                    "parse_mode": "Markdown"
+                    "parse_mode": "Markdown",
+                    "disable_web_page_preview": True
                 },
                 timeout=10
             )
+            # Small delay between messages to avoid rate limiting
+            if i < len(subscribers) - 1:
+                time.sleep(0.5)
         except Exception as e:
             print(f"Telegram error for {chat_id}: {e}")
