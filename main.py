@@ -35,12 +35,18 @@ SCRAPERS = [
 ]
 
 
-def main():
+def run_all_scrapers(return_stats=False):
     """
-    Main scraper function.
-    Now sends jobs per-subscriber - each user only gets jobs they haven't seen.
+    Run all scrapers and collect jobs.
+    
+    Args:
+        return_stats: If True, return (jobs, stats) tuple with scraper statistics
+    
+    Returns:
+        list or tuple: All jobs found, optionally with statistics
     """
     all_jobs = []
+    scraper_stats = {}
 
     print("========================================")
     print("     🚀 Job Scraper Started")
@@ -54,9 +60,22 @@ def main():
 
         try:
             jobs = scraper()
-            print(f"Jobs returned by {scraper_module}: {len(jobs)}")
+            job_count = len(jobs)
+            print(f"Jobs returned by {scraper_module}: {job_count}")
+            
+            # Store statistics
+            scraper_stats[scraper_module] = {
+                "count": job_count,
+                "status": "success"
+            }
+            
         except Exception as e:
             print(f"❌ Error in {scraper_module}: {e}")
+            scraper_stats[scraper_module] = {
+                "count": 0,
+                "status": "error",
+                "error": str(e)
+            }
             continue
 
         for job in jobs:
@@ -73,6 +92,18 @@ def main():
             all_jobs.append(job)
 
     print(f"\n✨ Total jobs found: {len(all_jobs)}")
+    
+    if return_stats:
+        return all_jobs, scraper_stats
+    return all_jobs
+
+
+def main():
+    """
+    Main scraper function for background/scheduled runs.
+    Sends jobs per-subscriber - each user only gets jobs they haven't seen.
+    """
+    all_jobs = run_all_scrapers(return_stats=False)
 
     # Send notifications per-subscriber (each user gets only unseen jobs)
     if all_jobs:
@@ -86,7 +117,7 @@ def main():
     else:
         print("\n📭 No jobs found to notify")
 
-    return all_jobs  # serve.py needs the full job list
+    return all_jobs
 
 
 if __name__ == "__main__":
