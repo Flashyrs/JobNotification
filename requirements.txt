@@ -1,5 +1,5 @@
 python-telegram-bot==20.5
-requests
-beautifulsoup4
-lxml
-python-dotenv
+requests==2.32.3
+beautifulsoup4==4.12.3
+lxml==4.9.3
+python-dotenv==1.0.1
